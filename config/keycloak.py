@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     KEYCLOAK_ADMIN_PASSWORD: str
 
     class Config:
-        env_file = ".env.fastapi"
+        env_file = ".env.keycloak-client"
 
 
 settings = Settings()

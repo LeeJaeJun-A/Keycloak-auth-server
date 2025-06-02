@@ -87,17 +87,6 @@ def create_user(
         print(f"[✓] User '{username}' created.")
 
 
-def set_user_password(token, realm_name, user_id, password, keycloak_url):
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    response = requests.put(
-        f"{keycloak_url}/admin/realms/{realm_name}/users/{user_id}/reset-password",
-        headers=headers,
-        json={"type": "password", "value": password, "temporary": False},
-    )
-    response.raise_for_status()
-    print(f"[✓] Password set for user '{user_id}' with temporary=False.")
-
-
 def get_user_id(token, realm_name, username, keycloak_url):
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(
@@ -250,7 +239,6 @@ def main():
 
     user_id = get_user_id(token, realm_name, admin_user, keycloak_url)
     assign_role_to_user(token, realm_name, user_id, "admin", keycloak_url)
-    # set_user_password(token, realm_name, user_id, admin_pass, keycloak_url)
 
     print(f"[i] Creating client '{client_id}' if not exists...")
     create_client(token, realm_name, client_id, keycloak_url)
@@ -258,7 +246,7 @@ def main():
     print(f"[i] Fetching client secret for '{client_id}'...")
     client_secret = get_client_secret(token, realm_name, client_id, keycloak_url)
 
-    env_path = ".env.fastapi"
+    env_path = ".env.keycloak-client"
     values = {
         "KEYCLOAK_URL": keycloak_url,
         "KEYCLOAK_REALM": realm_name,
