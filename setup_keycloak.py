@@ -1,7 +1,14 @@
 import requests
 from getpass import getpass
 from dotenv import set_key
+import os
+from dotenv import load_dotenv
 
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env.keycloak")
+load_dotenv(dotenv_path=dotenv_path, override=True)
+
+DEFAULT_MASTER_USER = os.getenv("KEYCLOAK_ADMIN")
+DEFAULT_MASTER_PASS = os.getenv("KEYCLOAK_ADMIN_PASSWORD")
 DEFAULT_KEYCLOAK_URL = "http://localhost:8080"
 
 
@@ -203,16 +210,15 @@ def main():
     custom_url = input(f"▶ Keycloak URL (default: {DEFAULT_KEYCLOAK_URL}): ")
     keycloak_url = custom_url.strip() or DEFAULT_KEYCLOAK_URL
 
-    master_user = input_with_validation(
-        "▶ Master admin username (default: admin): ", default="admin"
-    )
-    master_pass = getpass_with_validation("▶ Master admin password: ")
-
     realm_name = input_with_validation("▶ New Realm name: ", required=True)
     admin_user = input_with_validation("▶ Realm admin username: ", required=True)
     admin_pass = getpass_with_validation("▶ Admin password: ")
 
-    admin_email = input_with_validation("▶ Admin email: ", required=True)
+    admin_email = input_with_validation(
+        "▶ Admin email (default: default@example.com ): ",
+        default="default@example.com",
+        required=True,
+    )
     admin_first = input_with_validation(
         "▶ Admin first name (default: - ): ", default="-"
     )
@@ -222,7 +228,7 @@ def main():
     )
 
     print("\n[i] Getting admin token...")
-    token = get_admin_token(master_user, master_pass, keycloak_url)
+    token = get_admin_token(DEFAULT_MASTER_USER, DEFAULT_MASTER_PASS, keycloak_url)
 
     print(f"[i] Creating realm '{realm_name}'...")
     create_realm(token, realm_name, keycloak_url)
@@ -244,7 +250,7 @@ def main():
 
     user_id = get_user_id(token, realm_name, admin_user, keycloak_url)
     assign_role_to_user(token, realm_name, user_id, "admin", keycloak_url)
-    set_user_password(token, realm_name, user_id, admin_pass, keycloak_url)
+    # set_user_password(token, realm_name, user_id, admin_pass, keycloak_url)
 
     print(f"[i] Creating client '{client_id}' if not exists...")
     create_client(token, realm_name, client_id, keycloak_url)
