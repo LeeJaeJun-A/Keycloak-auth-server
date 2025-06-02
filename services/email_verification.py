@@ -1,9 +1,8 @@
 import random
 import string
-import os
 from redis import Redis
 from datetime import timedelta
-
+from config.fastapi import REDIS_HOST, REDIS_PORT
 
 class EmailVerificationService:
     CODE_TTL = 300
@@ -16,8 +15,8 @@ class EmailVerificationService:
 
     def __init__(self):
         self.r = Redis(
-            host=os.getenv("REDIS_HOST", "localhost"),
-            port=6379,
+            host=REDIS_HOST,
+            port=REDIS_PORT,
             decode_responses=True,
         )
 

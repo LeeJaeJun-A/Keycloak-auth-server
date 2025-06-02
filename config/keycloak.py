@@ -1,9 +1,9 @@
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from keycloak import KeycloakOpenID, KeycloakAdmin
 
 
 class Settings(BaseSettings):
-    KEYCLOAK_URL: str = "http://localhost:8080"
+    KEYCLOAK_URL: str
     KEYCLOAK_REALM: str
     KEYCLOAK_CLIENT_ID: str
     KEYCLOAK_CLIENT_SECRET: str
