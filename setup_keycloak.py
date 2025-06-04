@@ -11,7 +11,6 @@ DEFAULT_MASTER_USER = os.getenv("KEYCLOAK_ADMIN")
 DEFAULT_MASTER_PASS = os.getenv("KEYCLOAK_ADMIN_PASSWORD")
 DEFAULT_KEYCLOAK_URL = "http://localhost:8080"
 
-
 def get_admin_token(master_username, master_password, keycloak_url):
     response = requests.post(
         f"{keycloak_url}/realms/master/protocol/openid-connect/token",
@@ -25,7 +24,6 @@ def get_admin_token(master_username, master_password, keycloak_url):
     response.raise_for_status()
     return response.json()["access_token"]
 
-
 def create_realm(token, realm_name, keycloak_url):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     response = requests.post(
@@ -38,7 +36,6 @@ def create_realm(token, realm_name, keycloak_url):
     else:
         response.raise_for_status()
         print(f"[✓] Realm '{realm_name}' created.")
-
 
 def create_roles(token, realm_name, role_names, keycloak_url):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
@@ -58,12 +55,8 @@ def create_roles(token, realm_name, role_names, keycloak_url):
         response.raise_for_status()
         print(f"[✓] Created role '{role_name}'.")
 
-
-def create_user(
-    token, realm_name, username, password, keycloak_url, email, first_name, last_name
-):
+def create_user(token, realm_name, username, password, keycloak_url, email, first_name, last_name):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
     user_data = {
         "username": username,
         "email": email,
@@ -74,7 +67,6 @@ def create_user(
         "requiredActions": [],
         "emailVerified": True,
     }
-
     response = requests.post(
         f"{keycloak_url}/admin/realms/{realm_name}/users",
         headers=headers,
@@ -85,7 +77,6 @@ def create_user(
     else:
         response.raise_for_status()
         print(f"[✓] User '{username}' created.")
-
 
 def get_user_id(token, realm_name, username, keycloak_url):
     headers = {"Authorization": f"Bearer {token}"}
@@ -100,23 +91,35 @@ def get_user_id(token, realm_name, username, keycloak_url):
         return users[0]["id"]
     raise Exception(f"[!] User '{username}' not found.")
 
+def get_client_id_by_client_id(token, realm_name, keycloak_url, client_id):
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = requests.get(
+        f"{keycloak_url}/admin/realms/{realm_name}/clients",
+        headers=headers,
+        params={"clientId": client_id},
+    )
+    resp.raise_for_status()
+    clients = resp.json()
+    if not clients:
+        raise Exception(f"[!] Client '{client_id}' not found in realm '{realm_name}'")
+    return clients[0]["id"]
 
-def assign_role_to_user(token, realm_name, user_id, role_name, keycloak_url):
+def assign_realm_admin_role(token, realm_name, user_id, keycloak_url):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    client_id = get_client_id_by_client_id(token, realm_name, keycloak_url, "realm-management")
     role_resp = requests.get(
-        f"{keycloak_url}/admin/realms/{realm_name}/roles/{role_name}", headers=headers
+        f"{keycloak_url}/admin/realms/{realm_name}/clients/{client_id}/roles/realm-admin",
+        headers=headers,
     )
     role_resp.raise_for_status()
     role = role_resp.json()
-
     assign_resp = requests.post(
-        f"{keycloak_url}/admin/realms/{realm_name}/users/{user_id}/role-mappings/realm",
+        f"{keycloak_url}/admin/realms/{realm_name}/users/{user_id}/role-mappings/clients/{client_id}",
         headers=headers,
         json=[role],
     )
     assign_resp.raise_for_status()
-    print(f"[✓] Assigned role '{role_name}' to user.")
-
+    print("[✓] Assigned realm-admin role to user.")
 
 def create_client(token, realm_name, client_id, keycloak_url):
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
@@ -128,7 +131,6 @@ def create_client(token, realm_name, client_id, keycloak_url):
     if clients_resp.json():
         print(f"[i] Client '{client_id}' already exists. Skipping.")
         return
-
     response = requests.post(
         f"{keycloak_url}/admin/realms/{realm_name}/clients",
         headers=headers,
@@ -145,7 +147,6 @@ def create_client(token, realm_name, client_id, keycloak_url):
     response.raise_for_status()
     print(f"[✓] Client '{client_id}' created.")
 
-
 def get_client_secret(token, realm_name, client_id, keycloak_url):
     headers = {"Authorization": f"Bearer {token}"}
     clients_resp = requests.get(
@@ -158,7 +159,6 @@ def get_client_secret(token, realm_name, client_id, keycloak_url):
     if not clients:
         raise Exception(f"[!] Client '{client_id}' not found.")
     client_uuid = clients[0]["id"]
-
     secret_resp = requests.get(
         f"{keycloak_url}/admin/realms/{realm_name}/clients/{client_uuid}/client-secret",
         headers=headers,
@@ -166,12 +166,10 @@ def get_client_secret(token, realm_name, client_id, keycloak_url):
     secret_resp.raise_for_status()
     return secret_resp.json()["value"]
 
-
 def update_env_file(env_file, values):
     for key, value in values.items():
         set_key(env_file, key, value)
     print(f"[✓] Updated {env_file}")
-
 
 def input_with_validation(prompt, default=None, required=False):
     while True:
@@ -185,7 +183,6 @@ def input_with_validation(prompt, default=None, required=False):
         else:
             return ""
 
-
 def getpass_with_validation(prompt):
     while True:
         value = getpass(prompt).strip()
@@ -193,72 +190,34 @@ def getpass_with_validation(prompt):
             return value
         print("⚠️ 필수 입력 항목입니다. 다시 입력해주세요.")
 
-
 def main():
     print("=== Keycloak Realm & Admin User Setup ===")
-    custom_url = input(f"▶ Keycloak URL (default: {DEFAULT_KEYCLOAK_URL}): ")
-    keycloak_url = custom_url.strip() or DEFAULT_KEYCLOAK_URL
+    keycloak_url = input(f"▶ Keycloak URL (default: {DEFAULT_KEYCLOAK_URL}): ").strip() or DEFAULT_KEYCLOAK_URL
+    realm_name = input("▶ New Realm name: ").strip()
+    admin_user = input("▶ Realm admin username: ").strip()
+    admin_pass = getpass("▶ Admin password: ")
+    admin_email = input("▶ Admin email (default: default@example.com ): ").strip() or "default@example.com"
+    admin_first = input("▶ Admin first name (default: - ): ").strip() or "-"
+    admin_last = input("▶ Admin last name (default: - ): ").strip() or "-"
+    client_id = input("▶ Client ID (default: internal-api): ").strip() or "internal-api"
 
-    realm_name = input_with_validation("▶ New Realm name: ", required=True)
-    admin_user = input_with_validation("▶ Realm admin username: ", required=True)
-    admin_pass = getpass_with_validation("▶ Admin password: ")
-
-    admin_email = input_with_validation(
-        "▶ Admin email (default: default@example.com ): ",
-        default="default@example.com",
-        required=True,
-    )
-    admin_first = input_with_validation(
-        "▶ Admin first name (default: - ): ", default="-"
-    )
-    admin_last = input_with_validation("▶ Admin last name (default: - ): ", default="-")
-    client_id = input_with_validation(
-        "▶ Client ID (default: internal-api): ", default="internal-api"
-    )
-
-    print("\n[i] Getting admin token...")
     token = get_admin_token(DEFAULT_MASTER_USER, DEFAULT_MASTER_PASS, keycloak_url)
-
-    print(f"[i] Creating realm '{realm_name}'...")
     create_realm(token, realm_name, keycloak_url)
-
-    print("[i] Creating roles...")
     create_roles(token, realm_name, ["admin", "user"], keycloak_url)
-
-    print(f"[i] Creating user '{admin_user}'...")
-    create_user(
-        token,
-        realm_name,
-        admin_user,
-        admin_pass,
-        keycloak_url,
-        email=admin_email,
-        first_name=admin_first,
-        last_name=admin_last,
-    )
-
+    create_user(token, realm_name, admin_user, admin_pass, keycloak_url, admin_email, admin_first, admin_last)
     user_id = get_user_id(token, realm_name, admin_user, keycloak_url)
-    assign_role_to_user(token, realm_name, user_id, "admin", keycloak_url)
-
-    print(f"[i] Creating client '{client_id}' if not exists...")
+    assign_realm_admin_role(token, realm_name, user_id, keycloak_url)
     create_client(token, realm_name, client_id, keycloak_url)
-
-    print(f"[i] Fetching client secret for '{client_id}'...")
-    client_secret = get_client_secret(token, realm_name, client_id, keycloak_url)
-
-    env_path = ".env.keycloak-client"
-    values = {
+    secret = get_client_secret(token, realm_name, client_id, keycloak_url)
+    update_env_file(".env.keycloak-client", {
         "KEYCLOAK_URL": keycloak_url,
         "KEYCLOAK_REALM": realm_name,
         "KEYCLOAK_CLIENT_ID": client_id,
-        "KEYCLOAK_CLIENT_SECRET": client_secret,
+        "KEYCLOAK_CLIENT_SECRET": secret,
         "KEYCLOAK_ADMIN_USERNAME": admin_user,
         "KEYCLOAK_ADMIN_PASSWORD": admin_pass,
-    }
-
-    update_env_file(env_path, values)
+    })
     print("[✓] Setup complete.")
-
 
 if __name__ == "__main__":
     main()

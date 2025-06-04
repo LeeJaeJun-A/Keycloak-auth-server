@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, status
-from schemas.auth import EmailRequest, CodeVerifyRequest, RegisterRequest, LoginRequest
+from schemas.auth import EmailRequest, CodeVerifyRequest, RegisterRequest
 from services.email_verification import email_service
 from services.admin import KeycloakAdminService
 
-router = APIRouter(prefix="/api/v1/auth", tags=["Email Auth"])
+router = APIRouter(prefix="/api/v1/auth", tags=["Auth Admin"])
 
 
 @router.post("/send-code", summary="Send verification code to email")
@@ -50,6 +50,7 @@ def register(data: RegisterRequest):
             detail="EMAIL_NOT_VERIFIED",
         )
 
+    print(email_service.is_verified(data.email))
     user_id = KeycloakAdminService.create_user(
         username=data.username,
         email=data.email,
@@ -68,3 +69,6 @@ def register(data: RegisterRequest):
 @router.delete("/{username}", summary="Delete user by username")
 def delete_user(username: str):
     pass
+
+
+
