@@ -1,12 +1,14 @@
 from config.keycloak import keycloak_admin
-
-
+from jose import jwt, JWTError
+import requests
 import traceback
 
 
 class KeycloakAdminService:
     @staticmethod
-    def create_user(username: str, email: str, password: str, first_name: str, last_name: str):
+    def create_user(
+        username: str, email: str, password: str, first_name: str, last_name: str
+    ):
         user = {
             "username": username,
             "email": email,
