@@ -6,13 +6,21 @@ import traceback
 
 class KeycloakAdminService:
     @staticmethod
-    def create_user(username: str, email: str, password: str):
+    def create_user(username: str, email: str, password: str, first_name: str, last_name: str):
         user = {
             "username": username,
             "email": email,
+            "firstName": first_name,
+            "lastName": last_name,
             "enabled": True,
+            "emailVerified": True,
+            "requiredActions": [],
             "credentials": [
-                {"type": "password", "value": password, "temporary": False}
+                {
+                    "type": "password",
+                    "value": password,
+                    "temporary": False,
+                }
             ],
         }
 
@@ -21,27 +29,8 @@ class KeycloakAdminService:
 
             if user_id:
                 try:
-                    roles = keycloak_admin.get_realm_roles()
-                    print("[i] 현재 realm의 역할 목록:")
-                    for r in roles:
-                        print(f"- {r['name']}")
-
                     role = keycloak_admin.get_realm_role("user")
                     keycloak_admin.assign_realm_roles(user_id=user_id, roles=[role])
-
-                    print("[✓] 'user' 역할 할당됨")
-
-                    print("[i] 해당 유저의 realm 역할:")
-                    for r in keycloak_admin.get_realm_roles_of_user(user_id):
-                        print(f"- {r['name']}")
-
-                    client_id = keycloak_admin.get_client_id("realm-management")
-                    print("[i] 해당 유저의 realm-management 클라이언트 역할:")
-                    for r in keycloak_admin.get_client_roles_of_user(
-                        user_id=user_id, client_id=client_id
-                    ):
-                        print(f"- {r['name']}")
-
                 except Exception as e:
                     print(f"[역할 할당 실패] {e}")
                     traceback.print_exc()

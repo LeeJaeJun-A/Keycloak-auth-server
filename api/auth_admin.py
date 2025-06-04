@@ -50,11 +50,12 @@ def register(data: RegisterRequest):
             detail="EMAIL_NOT_VERIFIED",
         )
 
-    print(email_service.is_verified(data.email))
     user_id = KeycloakAdminService.create_user(
         username=data.username,
         email=data.email,
         password=data.password,
+        first_name=data.first_name,
+        last_name=data.last_name
     )
     if not user_id:
         raise HTTPException(
