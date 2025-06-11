@@ -1,13 +1,17 @@
 from config.keycloak import keycloak_admin
-from jose import jwt, JWTError
-import requests
+import uuid
 import traceback
 
 
 class KeycloakAdminService:
     @staticmethod
     def create_user(
-        username: str, email: str, password: str, first_name: str, last_name: str
+        username: str,
+        email: str,
+        password: str,
+        first_name: str,
+        last_name: str,
+        login_type: str = "local",
     ):
         user = {
             "username": username,
@@ -17,6 +21,7 @@ class KeycloakAdminService:
             "enabled": True,
             "emailVerified": True,
             "requiredActions": [],
+            "attributes": {"login_type": login_type},
             "credentials": [
                 {
                     "type": "password",
@@ -52,3 +57,21 @@ class KeycloakAdminService:
 
         user_id = users[0]["id"]
         keycloak_admin.delete_user(user_id)
+
+    @staticmethod
+    def user_exists_by_email(email: str) -> bool:
+        users = keycloak_admin.get_users({"email": email})
+        return len(users) > 0
+
+    @staticmethod
+    def sync_user_from_oauth(email: str, first_name: str, last_name: str, login_type: str):
+        if not KeycloakAdminService.user_exists_by_email(email):
+            temp_password = str(uuid.uuid4())
+            KeycloakAdminService.create_user(
+                username=email,
+                email=email,
+                password=temp_password,
+                first_name=first_name,
+                last_name=last_name,
+                login_type=login_type
+            )
