@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     KEYCLOAK_CLIENT_SECRET: str
     KEYCLOAK_ADMIN_USERNAME: str
     KEYCLOAK_ADMIN_PASSWORD: str
+    KEYCLOAK_API_KEY: str
 
     class Config:
         env_file = ".env.keycloak-client"

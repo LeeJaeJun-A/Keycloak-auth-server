@@ -3,6 +3,7 @@ from getpass import getpass
 from dotenv import set_key
 import os
 from dotenv import load_dotenv
+import secrets
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env.keycloak")
 load_dotenv(dotenv_path=dotenv_path, override=True)
@@ -190,6 +191,9 @@ def getpass_with_validation(prompt):
             return value
         print("⚠️ 필수 입력 항목입니다. 다시 입력해주세요.")
 
+def generate_api_key(length: int = 32) -> str:
+    return secrets.token_urlsafe(length)
+
 def main():
     print("=== Keycloak Realm & Admin User Setup ===")
     keycloak_url = input(f"▶ Keycloak URL (default: {DEFAULT_KEYCLOAK_URL}): ").strip() or DEFAULT_KEYCLOAK_URL
@@ -209,6 +213,9 @@ def main():
     assign_realm_admin_role(token, realm_name, user_id, keycloak_url)
     create_client(token, realm_name, client_id, keycloak_url)
     secret = get_client_secret(token, realm_name, client_id, keycloak_url)
+
+    api_key = generate_api_key()
+
     update_env_file(".env.keycloak-client", {
         "KEYCLOAK_URL": keycloak_url,
         "KEYCLOAK_REALM": realm_name,
@@ -216,6 +223,7 @@ def main():
         "KEYCLOAK_CLIENT_SECRET": secret,
         "KEYCLOAK_ADMIN_USERNAME": admin_user,
         "KEYCLOAK_ADMIN_PASSWORD": admin_pass,
+        "KEYCLOAK_API_KEY": api_key,
     })
     print("[✓] Setup complete.")
 

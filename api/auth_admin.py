@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request, Response
 from schemas.auth import EmailRequest, CodeVerifyRequest, RegisterRequest
 from services.email_verification import email_service
 from services.admin import KeycloakAdminService
+from services.jwt_verification import token_verifier
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Auth Admin"])
 
@@ -66,10 +67,24 @@ def register(data: RegisterRequest):
     return {"message": "Registration successful", "user_id": user_id}
 
 
-# TODO 자기 자신만 삭제할 수 있도록 JWT 토큰 검증(회원탈퇴)
 @router.delete("/{username}", summary="Delete user by username")
-def delete_user(username: str):
-    pass
+async def delete_user(username: str, request: Request, response: Response):
+    # 1. 인증된 사용자 정보 가져오기
+    payload = await token_verifier.get_valid_token_payload(request, response)
+    current_username = payload.get("preferred_username")
 
+    # 2. 본인 확인
+    if current_username != username:
+        raise HTTPException(status_code=403, detail="Can only delete your own account")
 
+    try:
+        # 3. Keycloak에서 사용자 삭제
+        KeycloakAdminService.delete_user_by_username(username)
 
+        # 4. 로그아웃 처리 (쿠키 삭제)
+        response.delete_cookie("access_token")
+        response.delete_cookie("refresh_token")
+
+        return {"status": "success", "message": f"User '{username}' deleted and logged out."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"USER_DELETE_FAILED: {str(e)}")

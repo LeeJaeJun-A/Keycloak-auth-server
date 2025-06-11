@@ -45,18 +45,10 @@ class KeycloakAdminService:
             return None
 
     @staticmethod
-    def delete_user(username: str) -> bool:
-        try:
-            users = keycloak_admin.get_users(query={"username": username})
-            if not users:
-                print(f"사용자 '{username}' 없음")
-                return False
+    def delete_user_by_username(username: str):
+        users = keycloak_admin.get_users({"username": username})
+        if not users:
+            raise ValueError("User not found")
 
-            user_id = users[0]["id"]
-            keycloak_admin.delete_user(user_id)
-            print(f"사용자 '{username}' 삭제 완료")
-            return True
-
-        except Exception as e:
-            print(f"사용자 삭제 실패: {e}")
-            return False
+        user_id = users[0]["id"]
+        keycloak_admin.delete_user(user_id)

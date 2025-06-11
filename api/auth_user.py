@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Response, Request
 from schemas.auth import LoginRequest
 from services.user import KeycloakUserService
-from services.jwt_verification import authenticate_user, authenticate_and_verify_user
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Auth User"])
 
@@ -34,30 +33,11 @@ def login(data: LoginRequest, response: Response):
         )
 
 
-@router.get("/verify", summary="Verify access token only")
-async def verify_token_only(
-    request: Request,
-    response: Response,
-):
-    payload = await authenticate_user(request, response)
-    return {
-        "status": "success",
-        "preferred_username": payload.get("preferred_username"),
-        "sub": payload.get("sub"),
-    }
-
-
-@router.get("/verify/user", summary="Verify access token and username")
-async def verify_token_and_username(
-    request: Request,
-    response: Response,
-    username: str,
-):
-    payload = await authenticate_and_verify_user(
-        request, response, expected_username=username
-    )
-    return {
-        "status": "success",
-        "verified_username": payload.get("preferred_username"),
-        "sub": payload.get("sub"),
-    }
+@router.post("/logout", summary="Logout user by clearing tokens")
+def logout(response: Response, request: Request):
+    refresh_token = request.cookies.get("refresh_token")
+    if refresh_token:
+        KeycloakUserService.logout(refresh_token)
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return {"status": "success", "message": "Logged out successfully"}
